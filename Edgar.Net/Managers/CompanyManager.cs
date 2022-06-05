@@ -15,14 +15,10 @@ namespace Edgar.Net.Managers
         public async Task<List<Company>> GetAllCompanies()
         {
             List<Company> companies = new List<Company>();
-            using (var webClient = new System.Net.WebClient())
-            {
-                var json = webClient.DownloadString(Globals.BaseUrl + "files/company_tickers_exchange.json");
-                
-                var response = JsonSerializer.Deserialize<CompanyHttpResponse>(json, Globals.JsonSettings);
-                companies = response.ParseData();
-            }
-            return companies;
+            string request = Globals.BaseUrl + "files/company_tickers_exchange.json";
+            string json = Utilities.DownloadText(request, false);
+            var response = JsonSerializer.Deserialize<CompanyHttpResponse>(json, Globals.JsonSettings);
+            return response.ParseData();
         }
     }
 }

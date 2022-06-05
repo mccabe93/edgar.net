@@ -8,7 +8,7 @@ namespace Examples
 {
     public class FormManagerExamples
     {
-        public async Task GetFormData()
+        public async Task GetFormDataFeed()
         {
             Edgar.Net.Managers.FormManager fm = new Edgar.Net.Managers.FormManager();
             var data = await fm.GetForms("PREM14A", startDate: new DateTime(2020, 1, 1));
@@ -18,6 +18,19 @@ namespace Examples
                 Console.Write(entry.Title);
                 Console.WriteLine($"(Full Form: {entry.FileLink.Url})");
             }
+        }
+
+        public async Task GetFormData(int indexToGet)
+        {
+            Edgar.Net.Managers.FormManager fm = new Edgar.Net.Managers.FormManager();
+            var feedData = await fm.GetForms("PREM14A", startDate: new DateTime(2022, 1, 1));
+
+            var data = feedData.Entries[indexToGet];
+
+            Console.WriteLine($"Data for {data.Title}");
+
+            var formData = await fm.GetFormFromEntry(data);
+            Console.WriteLine(formData);
         }
     }
 }

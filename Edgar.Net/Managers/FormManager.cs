@@ -25,6 +25,11 @@ namespace Edgar.Net.Managers
             return forms;
         }
 
+        public async Task<string> GetFormFromEntry(FormListEntry formEntry)
+        {
+            return GetFormTextFromIndexLink(formEntry.FileLink.Url);
+        }
+
         /// <summary>
         /// Utility function for calling the browse-edgar endpoint
         /// </summary>
@@ -42,17 +47,17 @@ namespace Edgar.Net.Managers
             string owner, int start,
             int? count, string output)
         {
-            string xml = "";
-            var webClient = new System.Net.WebClient();
-            webClient.Headers.Add("user-agent", User.UserAgent);
-            using (webClient)
-            {
-                var request = Globals.BaseUrl +
-                    $"cgi-bin/browse-edgar?action={action}&type={type}&company={company ?? ""}&dateb={dateb ?? ""}&owner={owner}&start={start}&count={count}&output={output}";
-                xml = webClient.DownloadString(request);
-            }
+            var request = Globals.BaseUrl +
+                $"cgi-bin/browse-edgar?action={action}&type={type}&company={company ?? ""}&dateb={dateb ?? ""}&owner={owner}&start={start}&count={count}&output={output}";
 
-            return xml;
+            return Utilities.DownloadText(request, true);
+        }
+
+
+        private string GetFormTextFromIndexLink(string link)
+        {
+            string textFormLink = link.Replace("-index.htm", ".txt");
+            return Utilities.DownloadText(textFormLink, true);
         }
     }
 }

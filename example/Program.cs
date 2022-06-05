@@ -2,6 +2,9 @@
 
 Console.WriteLine("Call some example functions . . . ");
 
-CompanyManagerExamples exmaples = new CompanyManagerExamples();
+//CompanyManagerExamples exmaples = new CompanyManagerExamples();
 
-await exmaples.GetAllCompanyInfo();
+//await exmaples.GetAllCompanyInfo();
+
+FormManagerExamples examples = new FormManagerExamples();
+await examples.GetFormData(0);
