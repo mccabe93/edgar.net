@@ -13,10 +13,11 @@ namespace Edgar.Net.Managers
 {
     public class FormManager
     {
-        public async Task<FormListResult> GetForms(string formType, string? company = null, DateTime? startDate = null, int? count = null)
+        public async Task<FormListResult> GetForms(string formType, string? company = null, DateTime? startDate = null, DateTime? endDate = null, int? count = null)
         {
             FormListResult forms = new FormListResult();
-            var response = await GetBrowseEdgarXml("getcurrent", formType, company, startDate.HasValue ? startDate.Value.ToShortDateString() : null, "include", 0, count, "atom");
+            var response = await GetBrowseEdgarXml("getcurrent", formType, company,
+                startDate.HasValue ? startDate.Value.ToShortDateString() : null, endDate.HasValue ? endDate.Value.ToShortDateString() : null, "include", 0, count, "atom");
             using (TextReader reader = new StringReader(response))
             {
                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(FormListResult));
@@ -43,12 +44,12 @@ namespace Edgar.Net.Managers
         /// <param name="output"></param>
         /// <returns></returns>
         public async Task<string> GetBrowseEdgarXml(string action, string type,
-            string? company, string? dateb,
+            string? company, string? datea, string? dateb,
             string owner, int start,
             int? count, string output)
         {
             var request = Globals.BaseUrl +
-                $"cgi-bin/browse-edgar?action={action}&type={type}&company={company ?? ""}&dateb={dateb ?? ""}&owner={owner}&start={start}&count={count}&output={output}";
+                $"cgi-bin/browse-edgar?action={action}&type={type}&company={company ?? ""}&datea={datea ?? ""}&dateb={dateb ?? ""}&owner={owner}&start={start}&count={count}&output={output}";
 
             return Utilities.DownloadText(request, true);
         }

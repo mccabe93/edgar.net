@@ -4,14 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Edgar.Net.Http.Forms.Models
+namespace Edgar.Net.Http.Forms
 {
-    public class FormHttpResponse
+    public interface IParsableForm
     {
-
-        public virtual void ParseData()
-        {
-
-        }
+        public void ParseData(string data);
     }
 }

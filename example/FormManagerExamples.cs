@@ -11,7 +11,7 @@ namespace Examples
         public async Task GetFormDataFeed()
         {
             Edgar.Net.Managers.FormManager fm = new Edgar.Net.Managers.FormManager();
-            var data = await fm.GetForms("PREM14A", startDate: new DateTime(2020, 1, 1));
+            var data = await fm.GetForms("DEFM14", startDate: new DateTime(2022, 1, 1));
 
             foreach (var entry in data.Entries)
             {
