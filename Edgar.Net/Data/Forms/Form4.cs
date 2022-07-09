@@ -1,4 +1,5 @@
 ﻿using Edgar.Net.Http.Forms;
+using Edgar.Net.Http.Forms.Models.Form4Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,54 @@ using System.Xml.Serialization;
 
 namespace Edgar.Net.Data.Forms
 {
+    public class Form4 : IParsableForm
+    {
+        public ReportingOwnerId Insider { get; set; }
+        public Issuer Company { get; set; }
+
+        public DateTime Date { get; set; }
+        public string Security { get; set; }
+        public string AcquiredOrDisposed { get; set; }
+        public decimal SharePrice { get; set; }
+        public uint Shares { get; set; }
+        public uint InsiderSharesAfterTransaction { get; set; }
+
+        public decimal TotalTransactionValue => SharePrice * Shares;
+        public decimal InsiderHoldingsChange => Shares / (InsiderSharesAfterTransaction + Shares);
+
+
+        public Form4(string data)
+        {
+            ParseData(data);
+        }
+
+        public void ParseData(string data)
+        {
+            int startIndex = data.IndexOf("<?xml version=\"1.0\"?>");
+            int endIndex = data.IndexOf("</XML>");
+            if (startIndex < 0)
+                return;
+            string xmlData = data.Substring(startIndex, endIndex - startIndex);
+            Form4Xml form = new Form4Xml();
+            using (TextReader reader = new StringReader(xmlData))
+            {
+                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Form4Xml));
+                form = (Form4Xml)xmlSerializer.Deserialize(reader);
+            }
+
+            this.Insider = form.ReportingOwner.Owner;
+            this.Company = form.Issuer;
+            if (form.TransactionDetails == null || form.TransactionDetails.Transactions == null)
+                return;
+            this.Date = form.TransactionDetails.Transactions.Date.Value;
+            this.Security = form.TransactionDetails.Transactions.Security.Value;
+            this.AcquiredOrDisposed = form.TransactionDetails.Transactions.TransactionAmounts.AcquiredOrDisposed.Value;
+            this.Shares = form.TransactionDetails.Transactions.TransactionAmounts.TransactionShares.Value;
+            this.SharePrice = form.TransactionDetails.Transactions.TransactionAmounts.TransactionPricePerShare.Value;
+            this.InsiderSharesAfterTransaction = form.TransactionDetails.Transactions.SharesAfterTransaction.SharesAfterTransaction.Value;
+
+        }
+    }
     [XmlRoot("issuer")]
     public class Issuer
     {
@@ -147,51 +196,5 @@ namespace Edgar.Net.Data.Forms
 
         [XmlElement("nonDerivativeTable")]
         public TransactionTable TransactionDetails { get; set; }
-    }
-
-    public class Form4 : IParsableForm
-    {
-        public ReportingOwnerId Insider { get; set; }
-        public Issuer Company { get; set; }
-
-        public DateTime Date { get; set; }
-        public string Security { get; set; }
-        public string AcquiredOrDisposed { get; set; }
-        public decimal SharePrice { get; set; }
-        public uint Shares { get; set; }
-        public uint InsiderSharesAfterTransaction { get; set; }
-
-        public decimal TotalTransactionValue => SharePrice * Shares;
-        public decimal InsiderHoldingsChange => Shares / (InsiderSharesAfterTransaction + Shares);
-
-
-        public Form4(string data)
-        {
-            ParseData(data);
-        }
-
-        public void ParseData(string data)
-        {
-            int startIndex = data.IndexOf("<?xml version=\"1.0\"?>");
-            int endIndex = data.IndexOf("</XML>");
-            string xmlData = data.Substring(startIndex, endIndex - startIndex);
-            Form4Xml form = new Form4Xml();
-            using (TextReader reader = new StringReader(xmlData))
-            {
-                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Form4Xml));
-                form = (Form4Xml)xmlSerializer.Deserialize(reader);
-            }
-
-            this.Insider = form.ReportingOwner.Owner;
-            this.Company = form.Issuer;
-            if (form.TransactionDetails.Transactions == null)
-                return;
-            this.Security = form.TransactionDetails.Transactions.Security.Value;
-            this.AcquiredOrDisposed = form.TransactionDetails.Transactions.TransactionAmounts.AcquiredOrDisposed.Value;
-            this.Shares = form.TransactionDetails.Transactions.TransactionAmounts.TransactionShares.Value;
-            this.SharePrice = form.TransactionDetails.Transactions.TransactionAmounts.TransactionPricePerShare.Value;
-            this.InsiderSharesAfterTransaction = form.TransactionDetails.Transactions.SharesAfterTransaction.SharesAfterTransaction.Value;
-
-        }
     }
 }

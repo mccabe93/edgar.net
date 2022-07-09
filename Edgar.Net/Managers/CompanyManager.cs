@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace Edgar.Net.Managers
 {
-    public class CompanyManager
+    public static class CompanyManager
     {
-        public async Task<List<Company>> GetAllCompanies()
+        public static async Task<List<Company>> GetAllCompanies()
         {
             List<Company> companies = new List<Company>();
             string request = Globals.BaseUrl + "files/company_tickers_exchange.json";

@@ -22,5 +22,14 @@ namespace Edgar.Net
             }
             return text;
         }
+        public static string CleanString(string dirtyString)
+        {
+            HashSet<char> removeChars = new HashSet<char>(" ?&^$#@!()+-,:;<>’\\/\"'=-_*");
+            StringBuilder result = new StringBuilder(dirtyString.Length);
+            foreach (char c in dirtyString)
+                if (!removeChars.Contains(c)) // prevent dirty chars
+                    result.Append(c);
+            return result.ToString();
+        }
     }
 }

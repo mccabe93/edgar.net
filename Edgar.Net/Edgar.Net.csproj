@@ -11,8 +11,4 @@
     <PackageReference Include="RestEase" Version="1.5.7" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Http\Forms\Models\" />
-  </ItemGroup>
-
 </Project>

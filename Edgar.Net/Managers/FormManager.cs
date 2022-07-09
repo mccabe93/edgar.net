@@ -11,24 +11,43 @@ using System.Xml.Serialization;
 
 namespace Edgar.Net.Managers
 {
-    public class FormManager
+    public static class FormManager
     {
-        public async Task<FormListResult> GetForms(string formType, string? company = null, DateTime? startDate = null, DateTime? endDate = null, int? count = null)
+        public static async Task<FormListResult> GetForms(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)
         {
             FormListResult forms = new FormListResult();
-            var response = await GetBrowseEdgarXml("getcurrent", formType, company,
-                startDate.HasValue ? startDate.Value.ToShortDateString() : null, endDate.HasValue ? endDate.Value.ToShortDateString() : null, "include", 0, count, "atom");
-            using (TextReader reader = new StringReader(response))
+            var request = await GetBrowseEdgarQuery(action, formType, company, cik,
+                startDate.HasValue ? startDate.Value.ToShortDateString() : null, endDate.HasValue ? endDate.Value.ToShortDateString() : null, owner, offset ?? 0, count, "atom");
+
+            var cacheItem = await CacheManager.GetFromCache(request);
+            bool existsInCache = cacheItem != null;
+
+            if (existsInCache)
             {
-                XmlSerializer xmlSerializer = new XmlSerializer(typeof(FormListResult));
-                forms = (FormListResult)xmlSerializer.Deserialize(reader);
+                return cacheItem.Response;
             }
+            else
+            {
+                var response = await DownloadForms(request);
+
+                using (TextReader reader = new StringReader(response))
+                {
+                    XmlSerializer xmlSerializer = new XmlSerializer(typeof(FormListResult));
+                    forms = (FormListResult)xmlSerializer.Deserialize(reader);
+                }
+            }
+
+            if (!existsInCache)
+            {
+                await CacheManager.AddToCache(request, forms);
+            }
+
             return forms;
         }
 
-        public async Task<string> GetFormFromEntry(FormListEntry formEntry)
+        public static async Task<string> GetFormFromEntry(FormListEntry formEntry)
         {
-            return GetFormTextFromIndexLink(formEntry.FileLink.Url);
+            return await GetFormTextFromIndexLink(formEntry.FileLink.Url);
         }
 
         /// <summary>
@@ -43,19 +62,34 @@ namespace Edgar.Net.Managers
         /// <param name="count"></param>
         /// <param name="output"></param>
         /// <returns></returns>
-        public async Task<string> GetBrowseEdgarXml(string action, string type,
-            string? company, string? datea, string? dateb,
+        public static async Task<string> GetBrowseEdgarQuery(string action, string type,
+            string? company, string? cik, string? datea, string? dateb,
             string owner, int start,
             int? count, string output)
         {
-            var request = Globals.BaseUrl +
-                $"cgi-bin/browse-edgar?action={action}&type={type}&company={company ?? ""}&datea={datea ?? ""}&dateb={dateb ?? ""}&owner={owner}&start={start}&count={count}&output={output}";
+            var request = Globals.BaseUrl + "cgi-bin/browse-edgar?";
+            if (cik != null)
+            {
+                request += $"company={company ?? ""}&CIK={cik}&type={type}&owner={owner}&count={count}";
+            }
+            else
+            {
+                request += $"type={type}&CIK={cik ?? ""}&company={company ?? ""}&datea={datea ?? ""}&dateb={dateb ?? ""}&owner={owner}&start={start}&count={count}";
+            }
+            if (action != null)
+            {
+                request += $"&action={action}";
+            }
+            return request += $"&output={output}";
+        }
 
+        private async static Task<string> DownloadForms(string request)
+        {
             return Utilities.DownloadText(request, true);
         }
 
 
-        private string GetFormTextFromIndexLink(string link)
+        private async static Task<string> GetFormTextFromIndexLink(string link)
         {
             string textFormLink = link.Replace("-index.htm", ".txt");
             return Utilities.DownloadText(textFormLink, true);
