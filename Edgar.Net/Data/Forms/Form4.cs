@@ -1,5 +1,4 @@
 ﻿using Edgar.Net.Http.Forms;
-using Edgar.Net.Http.Forms.Models.Form4Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
