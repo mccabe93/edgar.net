@@ -11,10 +11,16 @@ namespace Edgar.Net.Managers
     public static class CacheManager
     {
         private static Dictionary<string, CacheItem> _inMemoryData = new Dictionary<string, CacheItem>();
-        public static string CachePath { get; set; } = "./EDGARCache/";
+        public static string CachePath => AssemblyPath + "EDGARCache/";
+
+        private static string AssemblyPath { get; set; }
 
         static CacheManager()
         {
+            string strExeFilePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            //This will strip just the working path name:
+            //C:\Program Files\MyApplication
+            AssemblyPath = System.IO.Path.GetDirectoryName(strExeFilePath);
             if (!Directory.Exists(CachePath))
             {
                 Directory.CreateDirectory(CachePath);

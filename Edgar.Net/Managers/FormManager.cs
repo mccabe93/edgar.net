@@ -13,7 +13,49 @@ namespace Edgar.Net.Managers
 {
     public static class FormManager
     {
-        public static async Task<FormListResult> GetForms(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)
+
+        public async static Task<FormListResult> GetForms(string form, bool getCurrent, string company = null, string cik = null, DateTime? startDate = null, DateTime? endDate = null, int count = Globals.MaxFormsCount)
+        {
+            if (startDate.HasValue == false)
+            {
+                startDate = DateTime.Now.AddYears(-5);
+            }
+            string owner = "include";
+            if (company != null || cik != null)
+            {
+                owner = "only";
+            }
+            string action = null;
+            if (getCurrent)
+            {
+                action = "getcurrent";
+            }
+            int formsPerRequest = Math.Min(count, Globals.MaxFormsCount);
+            var formResults = await FormManager.GetFormsAdvanced(form,
+                    company,
+                    cik,
+                    owner,
+                    startDate,
+                    endDate,
+                    action: action,
+                    count: formsPerRequest);
+            for (int i = formsPerRequest; i < count; i += Globals.MaxFormsCount)
+            {
+                var partialFormResults = await FormManager.GetFormsAdvanced(form,
+                    company,
+                    cik,
+                    owner,
+                    startDate,
+                    endDate,
+                    action: action,
+                    offset: i,
+                    count: formsPerRequest);
+                formResults?.Entries.AddRange(partialFormResults.Entries);
+            }
+            return formResults;
+        }
+
+        public static async Task<FormListResult> GetFormsAdvanced(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)
         {
             FormListResult forms = new FormListResult();
             var request = await GetBrowseEdgarQuery(action, formType, company, cik,

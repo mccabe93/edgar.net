@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Edgar.Net.Data.Companies;
+using Edgar.Net.Managers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,11 +29,29 @@ namespace Edgar.Net
         /// https://www.sec.gov/edgar/sec-api-documentation
         /// </summary>
         public const string ApiUrl = "https://data.sec.gov/";
+        public static Dictionary<uint, Company> Companies { get; set; }
+
+        public const int MaxFormsCount = 100;
 
         public static JsonSerializerOptions JsonSettings = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
             WriteIndented = true
         };
+
+        static Globals()
+        {
+            //InitializeCIKDatabase();
+        }
+
+        private static void InitializeCIKDatabase()
+        {
+            Companies = new Dictionary<uint, Company>();
+            var results = CompanyManager.GetAllCompanies().Result;
+            foreach (var result in results)
+            {
+                Companies.TryAdd(result.CIK, result);
+            }
+        }
     }
 }

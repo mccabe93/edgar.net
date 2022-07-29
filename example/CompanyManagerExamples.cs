@@ -11,8 +11,7 @@ namespace Examples
     {
         public async Task GetAllCompanyInfo()
         {
-            CompanyManager manager = new CompanyManager();
-            var companies = await manager.GetAllCompanies();
+            var companies = await CompanyManager.GetAllCompanies();
             
             foreach(var company in companies)
             {

@@ -8,20 +8,101 @@ using System.Xml.Serialization;
 
 namespace Edgar.Net.Data.Forms
 {
-    public class Form4 : IParsableForm
+    public class Form4Transaction
     {
-        public ReportingOwnerId Insider { get; set; }
-        public Issuer Company { get; set; }
-
         public DateTime Date { get; set; }
         public string Security { get; set; }
         public string AcquiredOrDisposed { get; set; }
         public decimal SharePrice { get; set; }
         public uint Shares { get; set; }
         public uint InsiderSharesAfterTransaction { get; set; }
+    }
 
-        public decimal TotalTransactionValue => SharePrice * Shares;
-        public decimal InsiderHoldingsChange => Shares / (InsiderSharesAfterTransaction + Shares);
+    public enum InsiderNetTransactionType
+    {
+        Acquired,
+        Disposed,
+        Neutral
+    }
+
+    public class Form4 : IParsableForm
+    {
+        public ReportingOwnerId Insider { get; set; }
+        public Issuer Company { get; set; }
+
+        public List<Form4Transaction> Transactions { get; set; }
+
+        public decimal AverageAcquisitionPrice { get; set; }
+        public decimal SharesAcquired { get; set; }
+        public decimal AverageDisposalPrice { get; set; }
+        public decimal SharesDisposed { get; set; }
+
+        private decimal? _netShareValue = null;
+        public decimal NetShareValue
+        {
+            get 
+            {
+                if (_netShareValue == null) 
+                {
+                    decimal totalBought = 0m;
+                    decimal totalSold = 0m;
+                    foreach (var transaction in Transactions)
+                    {
+                        switch (transaction.AcquiredOrDisposed.ToUpper())
+                        {
+                            case "A":
+                                SharesAcquired += transaction.Shares;
+                                AverageAcquisitionPrice += transaction.SharePrice;
+                                totalBought += transaction.Shares * transaction.SharePrice;
+                                break;
+                            case "D":
+                                SharesDisposed += transaction.Shares;
+                                AverageDisposalPrice += transaction.SharePrice;
+                                totalSold += transaction.Shares * transaction.SharePrice;
+                                break;
+                        }
+                    }
+                    if (Transactions.Count > 0)
+                    {
+                        AverageAcquisitionPrice /= Transactions.Count;
+                        AverageDisposalPrice /= Transactions.Count;
+                    }
+                    _netShareValue = totalSold - totalBought;
+                }
+                return _netShareValue.Value;
+            }
+        }
+        private decimal? _netShareChange = null;
+        public decimal NetShareChange
+        {
+            get
+            {
+                if (_netShareChange == null) {
+                    decimal netShareValueInitialize = NetShareValue;
+                    _netShareChange = SharesAcquired - SharesDisposed;
+                }
+                return _netShareChange.Value;
+            }
+        }
+
+        public InsiderNetTransactionType NetTransaction
+        {
+            get
+            {
+                if(NetShareChange > 0)
+                {
+                    return InsiderNetTransactionType.Acquired;
+                }
+                else if(NetShareChange < 0)
+                {
+                    return InsiderNetTransactionType.Disposed;
+                }
+                else
+                {
+                    return InsiderNetTransactionType.Neutral;
+                }
+            }
+        }
 
 
         public Form4(string data)
@@ -37,22 +118,37 @@ namespace Edgar.Net.Data.Forms
                 return;
             string xmlData = data.Substring(startIndex, endIndex - startIndex);
             Form4Xml form = new Form4Xml();
+            Transactions = new List<Form4Transaction>();
             using (TextReader reader = new StringReader(xmlData))
             {
                 XmlSerializer xmlSerializer = new XmlSerializer(typeof(Form4Xml));
-                form = (Form4Xml)xmlSerializer.Deserialize(reader);
+                try
+                {
+                    form = (Form4Xml)xmlSerializer.Deserialize(reader);
+                }
+                catch
+                {
+                    return;
+                }
             }
 
             this.Insider = form.ReportingOwner.Owner;
             this.Company = form.Issuer;
             if (form.TransactionDetails == null || form.TransactionDetails.Transactions == null)
                 return;
-            this.Date = form.TransactionDetails.Transactions.Date.Value;
-            this.Security = form.TransactionDetails.Transactions.Security.Value;
-            this.AcquiredOrDisposed = form.TransactionDetails.Transactions.TransactionAmounts.AcquiredOrDisposed.Value;
-            this.Shares = form.TransactionDetails.Transactions.TransactionAmounts.TransactionShares.Value;
-            this.SharePrice = form.TransactionDetails.Transactions.TransactionAmounts.TransactionPricePerShare.Value;
-            this.InsiderSharesAfterTransaction = form.TransactionDetails.Transactions.SharesAfterTransaction.SharesAfterTransaction.Value;
+            foreach(var transactionDetails in form.TransactionDetails.Transactions)
+            {
+                var form4Transaction = new Form4Transaction()
+                {
+                    Date = transactionDetails.Date.Value,
+                    Security = transactionDetails.Security.Value,
+                    AcquiredOrDisposed = transactionDetails.TransactionAmounts.AcquiredOrDisposed.Value,
+                    Shares = transactionDetails.TransactionAmounts.TransactionShares.Value,
+                    SharePrice = transactionDetails.TransactionAmounts.TransactionPricePerShare.Value,
+                    InsiderSharesAfterTransaction = transactionDetails.SharesAfterTransaction.SharesAfterTransaction.Value
+                };
+                Transactions.Add(form4Transaction);
+            }
 
         }
     }
@@ -148,6 +244,8 @@ namespace Edgar.Net.Data.Forms
         public DecimalNode TransactionPricePerShare { get; set; }
         [XmlElement("transactionAcquiredDisposedCode")]
         public StringNode AcquiredOrDisposed { get; set; }
+        [XmlElement("footnoteId")]
+        public object Footnote { get; set; }
     }
     public class OwnershipNature
     {
@@ -182,7 +280,7 @@ namespace Edgar.Net.Data.Forms
     public class TransactionTable
     {
         [XmlElement("nonDerivativeTransaction")]
-        public Transaction Transactions { get; set; }
+        public List<Transaction> Transactions { get; set; }
     }
 
     [XmlRoot("ownershipDocument")]
