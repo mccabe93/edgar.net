@@ -10,8 +10,11 @@ namespace Edgar.Net.Managers
 {
     public static class CacheManager
     {
-        private static Dictionary<string, CacheItem> _inMemoryData = new Dictionary<string, CacheItem>();
-        public static string CachePath => AssemblyPath + "EDGARCache/";
+        private static Dictionary<string, FormListCacheItem> _inMemoryFormListData = new Dictionary<string, FormListCacheItem>();
+        private static Dictionary<string, string> _inMemoryFormTextData = new Dictionary<string, string>();
+        public static string CachePath => AssemblyPath + "/.edgarcache/";
+        public static string FormListCache => CachePath + "formlists/";
+        public static string FormTextCache => CachePath + "formtext/";
 
         private static string AssemblyPath { get; set; }
 
@@ -25,6 +28,30 @@ namespace Edgar.Net.Managers
             {
                 Directory.CreateDirectory(CachePath);
             }
+            if (!Directory.Exists(FormListCache))
+            {
+                Directory.CreateDirectory(FormListCache);
+            }
+            if (!Directory.Exists(FormTextCache))
+            {
+                Directory.CreateDirectory(FormTextCache);
+            }
+        }
+
+        internal static async Task<bool> AddToCache(string query, string response)
+        {
+            if (!Globals.CacheResults)
+            {
+                return false;
+            }
+
+            var cacheKey = GetCacheKey(query);
+
+            var filePath = GetFormTextCacheItemFilePath(cacheKey);
+
+            File.WriteAllText(filePath, response);
+
+            return File.Exists(filePath);
         }
 
         internal static async Task<bool> AddToCache(string query, FormListResult response)
@@ -34,7 +61,7 @@ namespace Edgar.Net.Managers
                 return false;
             }
 
-            CacheItem item = new CacheItem()
+            var item = new FormListCacheItem()
             {
                 Query = query,
                 Response = response
@@ -44,14 +71,14 @@ namespace Edgar.Net.Managers
 
             var cacheKey = GetCacheKey(query);
 
-            var filePath = GetCacheItemFilePath(cacheKey);
+            var filePath = GetFormListCacheItemFilePath(cacheKey);
 
             File.WriteAllText(filePath, jsonItem);
 
             return File.Exists(filePath);
         }
 
-        internal static async Task<CacheItem> GetFromCache(string query)
+        internal static async Task<FormListCacheItem> GetFormListFromCache(string query)
         {
             if (!Globals.CacheResults)
             {
@@ -60,22 +87,21 @@ namespace Edgar.Net.Managers
 
             var key = GetCacheKey(query);
             
-            if (_inMemoryData.ContainsKey(key))
+            if (_inMemoryFormListData.ContainsKey(key))
             {
-                return _inMemoryData[key];
+                return _inMemoryFormListData[key];
             }
 
-            string filePath = GetCacheItemFilePath(key);
-
+            string filePath = GetFormListCacheItemFilePath(key);
 
             if (File.Exists(filePath))
             {
                 using (FileStream createStream = File.OpenRead(filePath))
                 {
-                    var item = await JsonSerializer.DeserializeAsync<CacheItem>(createStream);
+                    var item = await JsonSerializer.DeserializeAsync<FormListCacheItem>(createStream);
                     if(item != null)
                     {
-                        _inMemoryData.Add(key, item);
+                        _inMemoryFormListData.Add(key, item);
                         return item;
                     }
                 }
@@ -83,9 +109,40 @@ namespace Edgar.Net.Managers
             return null;
         }
 
-        private static string GetCacheItemFilePath(string key)
+        internal static async Task<string> GetTextFromCache(string request)
         {
-            return $"{CachePath}/{key}.json";
+            if (!Globals.CacheResults)
+            {
+                return null;
+            }
+
+            var key = GetCacheKey(request);
+
+            if (_inMemoryFormTextData.ContainsKey(key))
+            {
+                return _inMemoryFormTextData[key];
+            }
+
+            string filePath = GetFormTextCacheItemFilePath(key);
+
+            if (File.Exists(filePath))
+            {
+                string item = File.ReadAllText(filePath);
+                _inMemoryFormTextData.Add(key, item);
+                return item;
+
+            }
+            return null;
+        }
+
+        private static string GetFormListCacheItemFilePath(string key)
+        {
+            return $"{FormListCache}/{key}.json";
+        }
+
+        private static string GetFormTextCacheItemFilePath(string key)
+        {
+            return $"{FormTextCache}/{key}.json";
         }
 
         private static string GetCacheKey(string query)
@@ -94,9 +151,14 @@ namespace Edgar.Net.Managers
         }
     }
 
-    internal class CacheItem
+    internal class FormListCacheItem
     {
         public string Query { get; set; }
         public FormListResult Response { get; set; }
+    }
+
+    internal class FormTextCacheItem
+    {
+        public string Response { get; set; }
     }
 }

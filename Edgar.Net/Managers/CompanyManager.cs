@@ -16,7 +16,7 @@ namespace Edgar.Net.Managers
         {
             List<Company> companies = new List<Company>();
             string request = Globals.BaseUrl + "files/company_tickers_exchange.json";
-            string json = Utilities.DownloadText(request, false);
+            string json = await Utilities.DownloadText(request, false);
             var response = JsonSerializer.Deserialize<CompanyHttpResponse>(json, Globals.JsonSettings);
             return response.ParseData();
         }

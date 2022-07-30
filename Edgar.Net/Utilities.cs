@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,17 +9,18 @@ namespace Edgar.Net
 {
     public static class Utilities
     {
-        public static string DownloadText(string url, bool includeHeader)
+        public static async Task<string> DownloadText(string url, bool includeHeader)
         {
-            string text = null;
-            var webClient = new System.Net.WebClient();
+            string text = null; 
+            var httpClient = new HttpClient();
             if (includeHeader)
             {
-                webClient.Headers.Add("user-agent", User.UserAgent);
+                httpClient.DefaultRequestHeaders.Add("user-agent", User.UserAgent);
             }
-            using (webClient)
+            using (httpClient)
             {
-                text = webClient.DownloadString(url);
+                var response = await httpClient.GetAsync(url);
+                text = await response.Content.ReadAsStringAsync();
             }
             return text;
         }

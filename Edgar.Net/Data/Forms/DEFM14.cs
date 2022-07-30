@@ -21,13 +21,43 @@ namespace Edgar.Net.Data.Forms
         public void ParseData(string data)
         {
             // This can be much improved . . .
-            string v1Find = "receive $";
-            int index = data.IndexOf(v1Find);
-            if (index == -1)
+            string dataCpy = data;
+            const string receiveLookupString = "receive $";
+            const string cashLookupString = "in cash";
+            Task<int> receiveLookup = Task.Factory.StartNew<int>(() =>
+            {
+                return dataCpy.IndexOf(receiveLookupString);
+            });
+            Task<int> cashLookup = Task.Factory.StartNew<int>(() =>
+            {
+                return dataCpy.IndexOf(cashLookupString);
+            });
+
+            var tasks = new Task<int>[2] { receiveLookup, cashLookup };
+
+            bool completed = Task.WaitAll(tasks, timeout: new TimeSpan(0,1,0));
+
+            if(!completed)
             {
                 return;
             }
-            string value = data.Substring(index + v1Find.Length, 5);
+
+            string value = null;
+            if (receiveLookup.Result > 0)
+            {
+                value = data.Substring(receiveLookup.Result + receiveLookupString.Length, 5);
+            }
+
+            if(cashLookup.Result > 0)
+            {
+                value = data.Substring(cashLookup.Result - cashLookupString.Length, 5);
+            }
+
+            if(value == null)
+            {
+                return;
+            }
+
             PurchasePrice = decimal.Parse(value);
         }
     }

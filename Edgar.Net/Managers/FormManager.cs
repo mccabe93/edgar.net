@@ -61,7 +61,7 @@ namespace Edgar.Net.Managers
             var request = await GetBrowseEdgarQuery(action, formType, company, cik,
                 startDate.HasValue ? startDate.Value.ToShortDateString() : null, endDate.HasValue ? endDate.Value.ToShortDateString() : null, owner, offset ?? 0, count, "atom");
 
-            var cacheItem = await CacheManager.GetFromCache(request);
+            var cacheItem = await CacheManager.GetFormListFromCache(request);
             bool existsInCache = cacheItem != null;
 
             if (existsInCache)
@@ -127,14 +127,28 @@ namespace Edgar.Net.Managers
 
         private async static Task<string> DownloadForms(string request)
         {
-            return Utilities.DownloadText(request, true);
+            var result = await CacheManager.GetTextFromCache(request);
+            if (result == null)
+            {
+                var response = await Utilities.DownloadText(request, true);
+                await CacheManager.AddToCache(request, response);
+                return response;
+            }
+            return result;
         }
 
 
         private async static Task<string> GetFormTextFromIndexLink(string link)
         {
             string textFormLink = link.Replace("-index.htm", ".txt");
-            return Utilities.DownloadText(textFormLink, true);
+            var result = await CacheManager.GetTextFromCache(textFormLink);
+            if (result == null)
+            {
+                var response = await Utilities.DownloadText(textFormLink, true);
+                await CacheManager.AddToCache(textFormLink, response);
+                return response;
+            }
+            return result;
         }
     }
 }
