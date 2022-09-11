@@ -41,6 +41,7 @@ namespace Edgar.Net.Managers
                     count: formsPerRequest);
             for (int i = formsPerRequest; i < count; i += Globals.MaxFormsCount)
             {
+                await Task.Delay(1200);
                 var partialFormResults = await FormManager.GetFormsAdvanced(form,
                     company,
                     cik,
@@ -58,6 +59,7 @@ namespace Edgar.Net.Managers
         public static async Task<FormListResult> GetFormsAdvanced(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)
         {
             FormListResult forms = new FormListResult();
+
             var request = await GetBrowseEdgarQuery(action, formType, company, cik,
                 startDate.HasValue ? startDate.Value.ToShortDateString() : null, endDate.HasValue ? endDate.Value.ToShortDateString() : null, owner, offset ?? 0, count, "atom");
 
@@ -125,7 +127,7 @@ namespace Edgar.Net.Managers
             return request += $"&output={output}";
         }
 
-        private async static Task<string> DownloadForms(string request)
+        private async static Task<string> DownloadForms(string request, bool useWebClient = true)
         {
             var result = await CacheManager.GetTextFromCache(request);
             if (result == null)

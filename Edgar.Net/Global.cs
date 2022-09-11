@@ -41,13 +41,13 @@ namespace Edgar.Net
 
         static Globals()
         {
-            //InitializeCIKDatabase();
+            InitializeCIKDatabase();
         }
 
-        private static void InitializeCIKDatabase()
+        private static async Task InitializeCIKDatabase()
         {
             Companies = new Dictionary<uint, Company>();
-            var results = CompanyManager.GetAllCompanies().Result;
+            var results = await CompanyManager.GetAllCompanies();
             foreach (var result in results)
             {
                 Companies.TryAdd(result.CIK, result);

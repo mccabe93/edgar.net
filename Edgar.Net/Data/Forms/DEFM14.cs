@@ -1,4 +1,5 @@
-﻿using Edgar.Net.Http.Forms;
+﻿using Edgar.Net.Data.Companies;
+using Edgar.Net.Http.Forms;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +12,32 @@ namespace Edgar.Net.Data.Forms
     public class DEFM14 : IParsableForm
     {
         public DateTime Date { get; set; }
-        public decimal PurchasePrice { get; set; }
+        public decimal? PurchasePrice { get; set; } = null;
+        public Company CompanyData { get; set; }
 
         public DEFM14(string data)
         {
             ParseData(data);
+        }
+
+        public void TryParseCompanyData(string title)
+        {
+            try
+            {
+                var cikTitleBaseData = title.Split('(');
+                var cikStr = cikTitleBaseData[1].Substring(0, 10);
+                var cik = UInt32.Parse(cikStr);
+                Company companyData = null;
+                bool found = Globals.Companies.TryGetValue(cik, out companyData);
+                if (found)
+                {
+                    CompanyData = companyData;
+                }
+            }
+            catch
+            {
+
+            }
         }
 
         public void ParseData(string data)
