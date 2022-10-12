@@ -17,7 +17,7 @@ namespace Edgar.Net
         /// This can reduce the number of API calls to EDGAR. Iideally, this increases the amount of data 
         /// you can grab before hitting their request cap.
         /// </summary>
-        public static bool CacheResults = true;
+        public static bool CacheResults = false;
 
         /// <summary>
         /// Used for most basic and bulk tasks.
@@ -41,7 +41,7 @@ namespace Edgar.Net
 
         static Globals()
         {
-            InitializeCIKDatabase();
+            InitializeCIKDatabase().Wait();
         }
 
         private static async Task InitializeCIKDatabase()

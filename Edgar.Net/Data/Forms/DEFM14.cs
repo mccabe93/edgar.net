@@ -13,10 +13,12 @@ namespace Edgar.Net.Data.Forms
     {
         public DateTime Date { get; set; }
         public decimal? PurchasePrice { get; set; } = null;
+        public string PurchasePriceDescription { get; set; }
         public Company CompanyData { get; set; }
 
-        public DEFM14(string data)
+        public DEFM14(string title, string data)
         {
+            TryParseCompanyData(title);
             ParseData(data);
         }
 
@@ -64,15 +66,22 @@ namespace Edgar.Net.Data.Forms
                 return;
             }
 
+            int lastParagraphStart = 0;
+            int nextParagraphEnd = 0;
+
             string value = null;
             if (receiveLookup.Result > 0)
             {
                 value = data.Substring(receiveLookup.Result + receiveLookupString.Length, 5);
+                lastParagraphStart = data.LastIndexOf("<P", receiveLookup.Result - 1, receiveLookup.Result);
+                nextParagraphEnd = data.IndexOf("</P>", receiveLookup.Result + 1);
             }
 
-            if(cashLookup.Result > 0)
+            if(cashLookup.Result > 0 && value == null)
             {
                 value = data.Substring(cashLookup.Result - cashLookupString.Length, 5);
+                lastParagraphStart = data.LastIndexOf("<P", cashLookup.Result - 1, cashLookup.Result);
+                nextParagraphEnd = data.IndexOf("</P>", cashLookup.Result + 1);
             }
 
             if(value == null)
@@ -80,7 +89,11 @@ namespace Edgar.Net.Data.Forms
                 return;
             }
 
-            PurchasePrice = decimal.Parse(value);
+            if(decimal.TryParse(value.Replace("$","").Replace(",",""), out var purchasePrice))
+            {
+                PurchasePrice = purchasePrice;
+                PurchasePriceDescription = data.Substring(lastParagraphStart, nextParagraphEnd);
+            }
         }
     }
 }

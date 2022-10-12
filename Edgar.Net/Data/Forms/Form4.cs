@@ -138,6 +138,8 @@ namespace Edgar.Net.Data.Forms
                 return;
             foreach(var transactionDetails in form.TransactionDetails.Transactions)
             {
+                if (transactionDetails.SharesAfterTransaction == null || transactionDetails.SharesAfterTransaction.SharesAfterTransaction == null)
+                    continue;
                 var form4Transaction = new Form4Transaction()
                 {
                     Date = transactionDetails.Date.Value,
