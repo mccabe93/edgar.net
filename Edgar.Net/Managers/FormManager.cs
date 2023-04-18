@@ -66,11 +66,11 @@ namespace Edgar.Net.Managers
 
         private static async void ThrottleRequest()
         {
-            if (DateTime.Now - _lastRequestTime <= TimeSpan.FromSeconds(1))
+            if (_lastRequestTime - DateTime.Now <= TimeSpan.FromSeconds(1))
             {
                 await Task.Delay(1000);
+                _lastRequestTime = DateTime.Now.AddSeconds(1);
             }
-            _lastRequestTime = DateTime.Now;
         }
 
         public static async Task<FormListResult> GetFormsAdvanced(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)

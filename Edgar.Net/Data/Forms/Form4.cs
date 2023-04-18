@@ -246,8 +246,8 @@ namespace Edgar.Net.Data.Forms
         public DecimalNode TransactionPricePerShare { get; set; }
         [XmlElement("transactionAcquiredDisposedCode")]
         public StringNode AcquiredOrDisposed { get; set; }
-        [XmlElement("footnoteId")]
-        public object Footnote { get; set; }
+        //[XmlElement("footnoteId")]
+        //public object Footnote { get; set; }
     }
     public class OwnershipNature
     {
