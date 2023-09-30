@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\whalehunter.net\WhaleHunter.NET.Data\WhaleHunter.NET.Markets.Data.csproj" />
     <ProjectReference Include="..\Edgar.Net\Edgar.Net.csproj" />
   </ItemGroup>
 

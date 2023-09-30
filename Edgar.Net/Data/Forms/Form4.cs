@@ -13,7 +13,7 @@ namespace Edgar.Net.Data.Forms
         public DateTime Date { get; set; }
         public string Security { get; set; }
         public string AcquiredOrDisposed { get; set; }
-        public decimal SharePrice { get; set; }
+        public double SharePrice { get; set; }
         public uint Shares { get; set; }
         public uint InsiderSharesAfterTransaction { get; set; }
     }
@@ -32,20 +32,20 @@ namespace Edgar.Net.Data.Forms
 
         public List<Form4Transaction> Transactions { get; set; }
 
-        public decimal AverageAcquisitionPrice { get; set; }
-        public decimal SharesAcquired { get; set; }
-        public decimal AverageDisposalPrice { get; set; }
-        public decimal SharesDisposed { get; set; }
+        public double AverageAcquisitionPrice { get; set; }
+        public double SharesAcquired { get; set; }
+        public double AverageDisposalPrice { get; set; }
+        public double SharesDisposed { get; set; }
 
-        private decimal? _netShareValue = null;
-        public decimal NetShareValue
+        private double? _netShareValue = null;
+        public double NetShareValue
         {
             get 
             {
                 if (_netShareValue == null) 
                 {
-                    decimal totalBought = 0m;
-                    decimal totalSold = 0m;
+                    double totalBought = 0d;
+                    double totalSold = 0d;
                     foreach (var transaction in Transactions)
                     {
                         switch (transaction.AcquiredOrDisposed.ToUpper())
@@ -72,13 +72,13 @@ namespace Edgar.Net.Data.Forms
                 return _netShareValue.Value;
             }
         }
-        private decimal? _netShareChange = null;
-        public decimal NetShareChange
+        private double? _netShareChange = null;
+        public double NetShareChange
         {
             get
             {
                 if (_netShareChange == null) {
-                    decimal netShareValueInitialize = NetShareValue;
+                    double netShareValueInitialize = NetShareValue;
                     _netShareChange = SharesAcquired - SharesDisposed;
                 }
                 return _netShareChange.Value;
@@ -232,10 +232,10 @@ namespace Edgar.Net.Data.Forms
         public uint Value { get; set; }
     }
 
-    public class DecimalNode
+    public class DoubleNode
     {
         [XmlElement("value")]
-        public decimal Value { get; set; }
+        public double Value { get; set; }
     }
 
     public class TransactionAmounts
@@ -243,7 +243,7 @@ namespace Edgar.Net.Data.Forms
         [XmlElement("transactionShares")]
         public UintNode TransactionShares { get; set; }
         [XmlElement("transactionPricePerShare")]
-        public DecimalNode TransactionPricePerShare { get; set; }
+        public DoubleNode TransactionPricePerShare { get; set; }
         [XmlElement("transactionAcquiredDisposedCode")]
         public StringNode AcquiredOrDisposed { get; set; }
         //[XmlElement("footnoteId")]

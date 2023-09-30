@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Edgar.Net", "Edgar.Net\Edga
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Examples", "example\Examples.csproj", "{391A45F4-8C5B-4243-B0F1-2DFDDB282846}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WhaleHunter.NET.Markets.Data", "..\whalehunter.net\WhaleHunter.NET.Data\WhaleHunter.NET.Markets.Data.csproj", "{30802FE9-9412-4BEA-8D7A-5B3505820E84}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{391A45F4-8C5B-4243-B0F1-2DFDDB282846}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{391A45F4-8C5B-4243-B0F1-2DFDDB282846}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{391A45F4-8C5B-4243-B0F1-2DFDDB282846}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30802FE9-9412-4BEA-8D7A-5B3505820E84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30802FE9-9412-4BEA-8D7A-5B3505820E84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30802FE9-9412-4BEA-8D7A-5B3505820E84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30802FE9-9412-4BEA-8D7A-5B3505820E84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

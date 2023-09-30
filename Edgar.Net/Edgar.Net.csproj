@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" Version="1.11.43" />
+    <PackageReference Include="OpenAI-DotNet" Version="6.7.2" />
     <PackageReference Include="RestEase" Version="1.5.7" />
   </ItemGroup>
 

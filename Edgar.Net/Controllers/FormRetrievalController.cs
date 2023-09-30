@@ -1,20 +1,14 @@
 ﻿using Edgar.Net.Data.Forms;
-using Edgar.Net.Http.Forms;
-using RestEase;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
+using Edgar.Net.Managers;
 using System.Xml.Serialization;
 
-namespace Edgar.Net.Managers
+namespace Edgar.Net.Controllers
 {
-    public static class FormManager
+    public class FormRetrievalController
     {
-        private static DateTime _lastRequestTime = DateTime.Now;
-        public async static Task<FormListResult> GetForms(string form, bool getCurrent, string company = null, string cik = null, DateTime? startDate = null, DateTime? endDate = null, int count = Globals.MaxFormsCount)
+        private DateTime _lastRequestTime = DateTime.Now;
+
+        public async Task<FormListResult> GetForms(string form, bool getCurrent, string company = null, string cik = null, DateTime? startDate = null, DateTime? endDate = null, int count = Globals.MaxFormsCount)
         {
             if (startDate.HasValue == false)
             {
@@ -36,7 +30,7 @@ namespace Edgar.Net.Managers
             }
             int formsPerRequest = Math.Min(count, Globals.MaxFormsCount);
             ThrottleRequest();
-            var formResults = await FormManager.GetFormsAdvanced(form,
+            var formResults = await GetFormsAdvanced(form,
                     company,
                     cik,
                     owner,
@@ -49,7 +43,7 @@ namespace Edgar.Net.Managers
                 for (int i = formsPerRequest; i < count; i += Globals.MaxFormsCount)
                 {
                     ThrottleRequest();
-                    var partialFormResults = await FormManager.GetFormsAdvanced(form,
+                    var partialFormResults = await GetFormsAdvanced(form,
                         company,
                         cik,
                         owner,
@@ -64,7 +58,7 @@ namespace Edgar.Net.Managers
             return formResults;
         }
 
-        private static async void ThrottleRequest()
+        private async void ThrottleRequest()
         {
             if (_lastRequestTime - DateTime.Now <= TimeSpan.FromSeconds(1))
             {
@@ -73,7 +67,7 @@ namespace Edgar.Net.Managers
             }
         }
 
-        public static async Task<FormListResult> GetFormsAdvanced(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)
+        public async Task<FormListResult> GetFormsAdvanced(string formType, string? company = null, string? cik = null, string? owner = "include", DateTime? startDate = null, DateTime? endDate = null, int? offset = null, int? count = null, string? action = null)
         {
             FormListResult forms = new FormListResult();
 
@@ -106,7 +100,7 @@ namespace Edgar.Net.Managers
             return forms;
         }
 
-        public static async Task<string> GetFormFromEntry(FormListEntry formEntry)
+        public async Task<string> GetFormFromEntry(FormListEntry formEntry)
         {
             return await GetFormTextFromIndexLink(formEntry.FileLink.Url);
         }
@@ -123,7 +117,7 @@ namespace Edgar.Net.Managers
         /// <param name="count"></param>
         /// <param name="output"></param>
         /// <returns></returns>
-        public static async Task<string> GetBrowseEdgarQuery(string action, string type,
+        public async Task<string> GetBrowseEdgarQuery(string action, string type,
             string? company, string? cik, string? datea, string? dateb,
             string owner, int start,
             int? count, string output)
@@ -144,7 +138,7 @@ namespace Edgar.Net.Managers
             return request += $"&output={output}";
         }
 
-        private async static Task<string> DownloadForms(string request, bool useWebClient = true)
+        public async Task<string> DownloadForms(string request, bool useWebClient = true)
         {
             var result = await CacheManager.GetTextFromCache(request);
             if (result == null)
@@ -157,7 +151,7 @@ namespace Edgar.Net.Managers
         }
 
 
-        private async static Task<string> GetFormTextFromIndexLink(string link)
+        public async Task<string> GetFormTextFromIndexLink(string link)
         {
             string textFormLink = link.Replace("-index.htm", ".txt");
             var result = await CacheManager.GetTextFromCache(textFormLink);

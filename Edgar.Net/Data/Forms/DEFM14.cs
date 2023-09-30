@@ -12,7 +12,7 @@ namespace Edgar.Net.Data.Forms
     public class DEFM14 : IParsableForm
     {
         public DateTime Date { get; set; }
-        public decimal? PurchasePrice { get; set; } = null;
+        public double? PurchasePrice { get; set; } = null;
         public string PurchasePriceDescription { get; set; }
         public Company CompanyData { get; set; }
 
@@ -89,10 +89,17 @@ namespace Edgar.Net.Data.Forms
                 return;
             }
 
-            if(decimal.TryParse(value.Replace("$","").Replace(",",""), out var purchasePrice))
+            if(double.TryParse(value.Replace("$","").Replace(",",""), out var purchasePrice))
             {
                 PurchasePrice = purchasePrice;
-                PurchasePriceDescription = data.Substring(lastParagraphStart, nextParagraphEnd);
+                try
+                {
+                    PurchasePriceDescription = data.Substring(lastParagraphStart, nextParagraphEnd);
+                }
+                catch
+                {
+                    PurchasePriceDescription = "N/A";
+                }
             }
         }
     }
