@@ -1,15 +1,10 @@
 ﻿using Edgar.Net.Data.Companies;
 using Edgar.Net.Managers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Edgar.Net
 {
-    public sealed class Globals
+    public static class Globals
     {
         /// <summary>
         /// If enabled, the cache manager will be used to store a query and its results as json locally
@@ -33,6 +28,8 @@ namespace Edgar.Net
 
         public const int MaxFormsCount = 100;
 
+        private static AutoResetEvent _lock = new AutoResetEvent(true);
+
         public static JsonSerializerOptions JsonSettings = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -46,12 +43,14 @@ namespace Edgar.Net
 
         private static async Task InitializeCIKDatabase()
         {
+            _lock.WaitOne();
             Companies = new Dictionary<uint, Company>();
             var results = await CompanyManager.GetAllCompanies();
             foreach (var result in results)
             {
                 Companies.TryAdd(result.CIK, result);
             }
+            _lock.Set();
         }
     }
 }

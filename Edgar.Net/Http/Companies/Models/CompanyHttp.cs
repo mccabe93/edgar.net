@@ -18,14 +18,32 @@ namespace Edgar.Net.Http.Companies.Models
             List<Company> result = new List<Company>();
             foreach (var c in Data)
             {
-                Company company = new Company()
+                try
                 {
-                    CIK = uint.Parse(c[0].ToString()),
-                    Name = c[1].ToString(),
-                    Ticker = c[2].ToString(),
-                    Exchange = c[3].ToString()
-                };
-                result.Add(company);
+                    string name = c[1].ToString();
+                    string ticker = c[2].ToString();
+                    string exchange = null;
+                    try
+                    {
+                        exchange = c[3].ToString();
+                    }
+                    catch
+                    {
+                        exchange = "";
+                    }
+                    Company company = new Company()
+                    {
+                        CIK = uint.Parse(c[0].ToString()),
+                        Name = name,
+                        Ticker = ticker,
+                        Exchange = exchange
+                    };
+                    result.Add(company);
+                }
+                catch
+                {
+                    ;
+                }
             }
             return result;
         }

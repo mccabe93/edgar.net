@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RestEase;
+using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
@@ -10,9 +11,10 @@ namespace Edgar.Net
 {
     public static class Utilities
     {
+        private static AutoResetEvent _fileLock = new AutoResetEvent(true);
+
         public static async Task<string> DownloadText(string url, bool includeHeader)
         {
-            string text = null;
             var httpClient = new WebClient();
             httpClient.Headers.Clear();
             if (includeHeader)
@@ -21,12 +23,13 @@ namespace Edgar.Net
                 httpClient.Headers.Add("accept-encoding", "gzip, deflate");
                 httpClient.Headers.Add("host", "www.sec.gov");
             }
+            List<byte> data = new List<byte>();
             using (httpClient)
             {
-                var response = httpClient.DownloadData(url);
-                text = DecompressResponse(response);
+                data = httpClient.DownloadData(url).ToList();
             }
-            return text;
+            var json = DecompressResponse(data.ToArray());
+            return json;
         }
 
 
@@ -42,9 +45,11 @@ namespace Edgar.Net
 
         private static string DecompressResponse(byte[] download)
         {
+            _fileLock.WaitOne();
+            string tmpFileName = $"{Guid.NewGuid()}.json";
             using (MemoryStream compressedMemoryStream = new MemoryStream(download, 0, download.Length))
             {
-                using (FileStream decompressedFileStream = File.Create("tmpstream.json"))
+                using (FileStream decompressedFileStream = File.Create(tmpFileName))
                 {
                     using (GZipStream decompressionStream = new GZipStream(compressedMemoryStream, CompressionMode.Decompress))
                     {
@@ -52,7 +57,10 @@ namespace Edgar.Net
                     }
                 }
             }
-            return File.ReadAllText("tmpstream.json");
+            var json = File.ReadAllText(tmpFileName);
+            File.Delete(tmpFileName);
+            _fileLock.Set();
+            return json;
         }
     }
 }
