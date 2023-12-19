@@ -1,10 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;multi-launch</Configurations>
+    <Title>Edgar.NET</Title>
+    <Company>1130 Labs</Company>
+    <Description>Open-source API for the SEC EDGAR database.</Description>
+    <Copyright>MIT</Copyright>
+    <PackageProjectUrl>https://github.com/mccabe93/edgar.net/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mccabe93/edgar.net/</RepositoryUrl>
+    <PackageTags>EDGAR SEC</PackageTags>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
+    <Version>1.0.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
