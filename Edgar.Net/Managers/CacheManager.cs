@@ -1,10 +1,5 @@
 ﻿using Edgar.Net.Data.Forms;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Edgar.Net.Managers
 {
@@ -12,9 +7,9 @@ namespace Edgar.Net.Managers
     {
         private static Dictionary<string, FormListCacheItem> _inMemoryFormListData = new Dictionary<string, FormListCacheItem>();
         private static Dictionary<string, string> _inMemoryFormTextData = new Dictionary<string, string>();
-        public static string CachePath => AssemblyPath + "/.edgarcache/";
-        public static string FormListCache => CachePath + "formlists/";
-        public static string FormTextCache => CachePath + "formtext/";
+        public static string CachePath => $"{AssemblyPath}/.edgarcache/";
+        public static string FormListCache => $"{CachePath}formlists/";
+        public static string FormTextCache => $"{CachePath}formtext/";
 
         private static string AssemblyPath { get; set; }
 
