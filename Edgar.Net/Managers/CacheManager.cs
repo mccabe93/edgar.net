@@ -1,159 +1,183 @@
-﻿using Edgar.Net.Data.Forms;
 using System.Text.Json;
+using Edgar.Net.Data.Forms;
 
-namespace Edgar.Net.Managers
+namespace Edgar.Net.Managers;
+
+/// <summary>
+/// Manages caching of EDGAR API responses to reduce API calls.
+/// </summary>
+public class EdgarCacheManager
 {
-    public static class CacheManager
+    private readonly EdgarClient _client;
+    private readonly Dictionary<string, FormListCacheItem> _inMemoryFormListData = [];
+    private readonly Dictionary<string, string> _inMemoryFormTextData = [];
+    private readonly SemaphoreSlim _cacheLock = new(1, 1);
+
+    private string AssemblyPath { get; } = GetAssemblyPath();
+    public string CachePath => Path.Combine(AssemblyPath, ".edgarcache");
+    public string FormListCache => Path.Combine(CachePath, "formlists");
+    public string FormTextCache => Path.Combine(CachePath, "formtext");
+
+    public EdgarCacheManager(EdgarClient client)
     {
-        private static Dictionary<string, FormListCacheItem> _inMemoryFormListData = new Dictionary<string, FormListCacheItem>();
-        private static Dictionary<string, string> _inMemoryFormTextData = new Dictionary<string, string>();
-        public static string CachePath => $"{AssemblyPath}/.edgarcache/";
-        public static string FormListCache => $"{CachePath}formlists/";
-        public static string FormTextCache => $"{CachePath}formtext/";
+        _client = client;
+        EnsureCacheDirectoriesExist();
+    }
 
-        private static string AssemblyPath { get; set; }
+    private static string GetAssemblyPath()
+    {
+        var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        return Path.GetDirectoryName(exePath) ?? Environment.CurrentDirectory;
+    }
 
-        static CacheManager()
+    private void EnsureCacheDirectoriesExist()
+    {
+        Directory.CreateDirectory(CachePath);
+        Directory.CreateDirectory(FormListCache);
+        Directory.CreateDirectory(FormTextCache);
+    }
+
+    /// <summary>
+    /// Adds a text response to the cache.
+    /// </summary>
+    public async Task<bool> AddToCacheAsync(string query, string response)
+    {
+        if (!_client.CacheResults)
         {
-            string strExeFilePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            //This will strip just the working path name:
-            //C:\Program Files\MyApplication
-            AssemblyPath = System.IO.Path.GetDirectoryName(strExeFilePath);
-            if (!Directory.Exists(CachePath))
-            {
-                Directory.CreateDirectory(CachePath);
-            }
-            if (!Directory.Exists(FormListCache))
-            {
-                Directory.CreateDirectory(FormListCache);
-            }
-            if (!Directory.Exists(FormTextCache))
-            {
-                Directory.CreateDirectory(FormTextCache);
-            }
+            return false;
         }
 
-        internal static async Task<bool> AddToCache(string query, string response)
+        var cacheKey = GetCacheKey(query);
+        var filePath = GetFormTextCacheItemFilePath(cacheKey);
+
+        await _cacheLock.WaitAsync();
+        try
         {
-            if (!Globals.CacheResults)
-            {
-                return false;
-            }
-
-            var cacheKey = GetCacheKey(query);
-
-            var filePath = GetFormTextCacheItemFilePath(cacheKey);
-
-            File.WriteAllText(filePath, response);
-
+            await File.WriteAllTextAsync(filePath, response);
+            _inMemoryFormTextData[cacheKey] = response;
             return File.Exists(filePath);
         }
-
-        internal static async Task<bool> AddToCache(string query, FormListResult response)
+        finally
         {
-            if (!Globals.CacheResults)
-            {
-                return false;
-            }
+            _cacheLock.Release();
+        }
+    }
 
-            var item = new FormListCacheItem()
-            {
-                Query = query,
-                Response = response
-            };
-
-            var jsonItem = JsonSerializer.Serialize(item, Globals.JsonSettings);
-
-            var cacheKey = GetCacheKey(query);
-
-            var filePath = GetFormListCacheItemFilePath(cacheKey);
-
-            File.WriteAllText(filePath, jsonItem);
-
-            return File.Exists(filePath);
+    /// <summary>
+    /// Adds a form list result to the cache.
+    /// </summary>
+    public async Task<bool> AddToCacheAsync(string query, FormListResult response)
+    {
+        if (!_client.CacheResults)
+        {
+            return false;
         }
 
-        internal static async Task<FormListCacheItem> GetFormListFromCache(string query)
+        var cacheKey = GetCacheKey(query);
+        var item = new FormListCacheItem { Query = query, Response = response };
+
+        var jsonItem = JsonSerializer.Serialize(item, _client.JsonSettings);
+        var filePath = GetFormListCacheItemFilePath(cacheKey);
+
+        await _cacheLock.WaitAsync();
+        try
         {
-            if (!Globals.CacheResults)
-            {
-                return null;
-            }
+            await File.WriteAllTextAsync(filePath, jsonItem);
+            _inMemoryFormListData[cacheKey] = item;
+            return File.Exists(filePath);
+        }
+        finally
+        {
+            _cacheLock.Release();
+        }
+    }
 
-            var key = GetCacheKey(query);
-            
-            if (_inMemoryFormListData.ContainsKey(key))
-            {
-                return _inMemoryFormListData[key];
-            }
-
-            string filePath = GetFormListCacheItemFilePath(key);
-
-            if (File.Exists(filePath))
-            {
-                using (FileStream createStream = File.OpenRead(filePath))
-                {
-                    var item = await JsonSerializer.DeserializeAsync<FormListCacheItem>(createStream);
-                    if(item != null)
-                    {
-                        _inMemoryFormListData.Add(key, item);
-                        return item;
-                    }
-                }
-            }
+    /// <summary>
+    /// Retrieves a form list from the cache.
+    /// </summary>
+    public async Task<FormListCacheItem?> GetFormListFromCacheAsync(string query)
+    {
+        if (!_client.CacheResults)
+        {
             return null;
         }
 
-        internal static async Task<string> GetTextFromCache(string request)
+        var key = GetCacheKey(query);
+
+        if (_inMemoryFormListData.TryGetValue(key, out var cachedItem))
         {
-            if (!Globals.CacheResults)
-            {
-                return null;
-            }
+            return cachedItem;
+        }
 
-            var key = GetCacheKey(request);
+        var filePath = GetFormListCacheItemFilePath(key);
 
-            if (_inMemoryFormTextData.ContainsKey(key))
-            {
-                return _inMemoryFormTextData[key];
-            }
-
-            string filePath = GetFormTextCacheItemFilePath(key);
-
-            if (File.Exists(filePath))
-            {
-                string item = File.ReadAllText(filePath);
-                _inMemoryFormTextData.Add(key, item);
-                return item;
-
-            }
+        if (!File.Exists(filePath))
+        {
             return null;
         }
 
-        private static string GetFormListCacheItemFilePath(string key)
+        await using var stream = File.OpenRead(filePath);
+        var item = await JsonSerializer.DeserializeAsync<FormListCacheItem>(stream);
+
+        if (item is not null)
         {
-            return $"{FormListCache}/{key}.json";
+            _inMemoryFormListData[key] = item;
         }
 
-        private static string GetFormTextCacheItemFilePath(string key)
-        {
-            return $"{FormTextCache}/{key}.json";
-        }
-
-        private static string GetCacheKey(string query)
-        {
-            return $"{Utilities.CleanString(query)}";
-        }
+        return item;
     }
 
-    internal class FormListCacheItem
+    /// <summary>
+    /// Retrieves text from the cache.
+    /// </summary>
+    public async Task<string?> GetTextFromCacheAsync(string request)
     {
-        public string Query { get; set; }
-        public FormListResult Response { get; set; }
+        if (!_client.CacheResults)
+        {
+            return null;
+        }
+
+        var key = GetCacheKey(request);
+
+        if (_inMemoryFormTextData.TryGetValue(key, out var cachedText))
+        {
+            return cachedText;
+        }
+
+        var filePath = GetFormTextCacheItemFilePath(key);
+
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        var text = await File.ReadAllTextAsync(filePath);
+        _inMemoryFormTextData[key] = text;
+        return text;
     }
 
-    internal class FormTextCacheItem
-    {
-        public string Response { get; set; }
-    }
+    private string GetFormListCacheItemFilePath(string key) =>
+        Path.Combine(FormListCache, $"{key}.json");
+
+    private string GetFormTextCacheItemFilePath(string key) =>
+        Path.Combine(FormTextCache, $"{key}.json");
+
+    private string GetCacheKey(string query) => _client.Utilities.CleanString(query);
+}
+
+/// <summary>
+/// Cache item for form list results.
+/// </summary>
+public class FormListCacheItem
+{
+    public required string Query { get; init; }
+    public required FormListResult Response { get; init; }
+}
+
+/// <summary>
+/// Cache item for form text content.
+/// </summary>
+public class FormTextCacheItem
+{
+    public required string Response { get; init; }
 }

@@ -1,23 +1,38 @@
-﻿using Edgar.Net.Data.Companies;
-using Edgar.Net.Http.Companies.Models;
 using System.Text.Json;
+using Edgar.Net.Data.Companies;
+using Edgar.Net.Http.Companies.Models;
 
-namespace Edgar.Net.Managers
+namespace Edgar.Net.Managers;
+
+/// <summary>
+/// Manages retrieval of company data from the SEC.
+/// </summary>
+public class EdgarCompanyManager(EdgarClient client)
 {
-    public static class CompanyManager
+    private readonly EdgarClient _client = client;
+    private const string CompanyTickersEndpoint = "files/company_tickers_exchange.json";
+
+    /// <summary>
+    /// Retrieves all companies registered with the SEC.
+    /// </summary>
+    /// <returns>A list of all companies.</returns>
+    public async Task<List<Company>> GetAllCompaniesAsync()
     {
-        public static async Task<List<Company>> GetAllCompanies()
+        var requestUrl = _client.BaseUrl + CompanyTickersEndpoint;
+
+        var cachedData = await _client.Cache.GetTextFromCacheAsync(requestUrl);
+
+        if (cachedData is null)
         {
-            List<Company> companies = new List<Company>();
-            string request = Globals.BaseUrl + "files/company_tickers_exchange.json";
-            var cachedCompanyData = await CacheManager.GetTextFromCache(request);
-            if (cachedCompanyData == null)
-            {
-                cachedCompanyData = await Utilities.DownloadText(request, true);
-            }
-            await CacheManager.AddToCache(request, cachedCompanyData);
-            var response = JsonSerializer.Deserialize<CompanyHttpResponse>(cachedCompanyData, Globals.JsonSettings);
-            return response.ParseData();
+            cachedData = await _client.Utilities.DownloadTextAsync(requestUrl, includeHeader: true);
+            await _client.Cache.AddToCacheAsync(requestUrl, cachedData);
         }
+
+        var response = JsonSerializer.Deserialize<CompanyHttpResponse>(
+            cachedData,
+            _client.JsonSettings
+        );
+
+        return response?.ParseData() ?? [];
     }
 }

@@ -1,61 +1,64 @@
-﻿using System.IO.Compression;
-using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 
-namespace Edgar.Net
+namespace Edgar.Net;
+
+/// <summary>
+/// Utility methods for HTTP operations and string manipulation.
+/// </summary>
+public class EdgarUtilities
 {
-    public static class Utilities
+    private readonly HttpClient _httpClient;
+    private readonly EdgarClient _client;
+
+    public EdgarUtilities(EdgarClient client)
     {
-        private static AutoResetEvent _fileLock = new AutoResetEvent(true);
-
-        public static async Task<string> DownloadText(string url, bool includeHeader)
+        _client = client;
+        var handler = new HttpClientHandler
         {
-            var httpClient = new WebClient();
-            httpClient.Headers.Clear();
-            if (includeHeader)
-            {
-                httpClient.Headers.Add("user-agent", User.UserAgent);
-                httpClient.Headers.Add("accept-encoding", "gzip, deflate");
-                httpClient.Headers.Add("host", "www.sec.gov");
-            }
-            List<byte> data = new List<byte>();
-            using (httpClient)
-            {
-                data = httpClient.DownloadData(url).ToList();
-            }
-            var json = DecompressResponse(data.ToArray());
-            return json;
+            AutomaticDecompression =
+                System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+        };
+        _httpClient = new HttpClient(handler);
+    }
+
+    /// <summary>
+    /// Downloads text content from the specified URL.
+    /// </summary>
+    public async Task<string> DownloadTextAsync(string url, bool includeHeader)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+        if (includeHeader)
+        {
+            request.Headers.UserAgent.ParseAdd(_client.UserAgent);
+            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+            request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
+            request.Headers.Host = "www.sec.gov";
         }
 
+        using var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
 
-        public static string CleanString(string dirtyString)
-        {
-            HashSet<char> removeChars = new HashSet<char>(" ?&^$#@!()+-,:;<>’\\/\"'=-_*");
-            StringBuilder result = new StringBuilder(dirtyString.Length);
-            foreach (char c in dirtyString)
-                if (!removeChars.Contains(c)) // prevent dirty chars
-                    result.Append(c);
-            return result.ToString();
-        }
+        return await response.Content.ReadAsStringAsync();
+    }
 
-        private static string DecompressResponse(byte[] download)
+    /// <summary>
+    /// Removes special characters from a string to create a safe filename/key.
+    /// </summary>
+    public string CleanString(string dirtyString)
+    {
+        var removeChars = new HashSet<char>(" ?&^$#@!()+-,:;<>'\\/\"'=-_*");
+        var result = new StringBuilder(dirtyString.Length);
+
+        foreach (var c in dirtyString)
         {
-            _fileLock.WaitOne();
-            string tmpFileName = $"{Guid.NewGuid()}.json";
-            using (MemoryStream compressedMemoryStream = new MemoryStream(download, 0, download.Length))
+            if (!removeChars.Contains(c))
             {
-                using (FileStream decompressedFileStream = File.Create(tmpFileName))
-                {
-                    using (GZipStream decompressionStream = new GZipStream(compressedMemoryStream, CompressionMode.Decompress))
-                    {
-                        decompressionStream.CopyTo(decompressedFileStream);
-                    }
-                }
+                result.Append(c);
             }
-            var json = File.ReadAllText(tmpFileName);
-            File.Delete(tmpFileName);
-            _fileLock.Set();
-            return json;
         }
+
+        return result.ToString();
     }
 }

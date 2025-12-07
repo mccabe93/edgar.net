@@ -1,7 +1,8 @@
-﻿using Edgar.Net.Data.Companies;
-using Edgar.Net.Data.Forms;
-using Edgar.Net.Managers;
+﻿using Edgar.Net;
 using Examples;
 
-FormManagerExamples examples = new FormManagerExamples();
-await examples.DEFM14Example();
+var client = new EdgarClient { CacheResults = true };
+await client.InitializeAsync();
+
+var examples = new FormManagerExamples(client);
+await examples.DEFM14ExampleAsync();

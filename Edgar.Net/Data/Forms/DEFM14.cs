@@ -1,99 +1,109 @@
-﻿using Edgar.Net.Data.Companies;
+using Edgar.Net.Data.Companies;
 using Edgar.Net.Http.Forms;
 
-namespace Edgar.Net.Data.Forms
+namespace Edgar.Net.Data.Forms;
+
+/// <summary>
+/// Represents a DEFM14 proxy statement form for mergers and acquisitions.
+/// </summary>
+public class DEFM14 : IParsableForm
 {
-    public class DEFM14 : IParsableForm
+    private const string ReceiveLookupString = "receive $";
+    private const string CashLookupString = "in cash";
+
+    public DateTime Date { get; set; }
+    public double? PurchasePrice { get; set; }
+    public string? PurchasePriceDescription { get; set; }
+    public Company? CompanyData { get; set; }
+
+    private readonly EdgarClient? _client;
+
+    public DEFM14(string title, string data, EdgarClient? client = null)
     {
-        public DateTime Date { get; set; }
-        public double? PurchasePrice { get; set; } = null;
-        public string PurchasePriceDescription { get; set; }
-        public Company CompanyData { get; set; }
+        _client = client;
+        TryParseCompanyData(title);
+        ParseData(data);
+    }
 
-        public DEFM14(string title, string data)
+    /// <summary>
+    /// Attempts to parse company data from the form title.
+    /// </summary>
+    private void TryParseCompanyData(string title)
+    {
+        var cikStartIndex = title.IndexOf('(');
+        if (cikStartIndex < 0 || cikStartIndex + 11 > title.Length)
         {
-            TryParseCompanyData(title);
-            ParseData(data);
+            return;
         }
 
-        public void TryParseCompanyData(string title)
-        {
-            try
-            {
-                var cikTitleBaseData = title.Split('(');
-                var cikStr = cikTitleBaseData[1].Substring(0, 10);
-                var cik = UInt32.Parse(cikStr);
-                Company companyData = null;
-                bool found = Globals.Companies.TryGetValue(cik, out companyData);
-                if (found)
-                {
-                    CompanyData = companyData;
-                }
-            }
-            catch
-            {
+        var cikStr = title.Substring(cikStartIndex + 1, 10);
 
+        if (!uint.TryParse(cikStr, out var cik))
+        {
+            return;
+        }
+
+        if (_client?.Companies.TryGetValue(cik, out var companyData) == true)
+        {
+            CompanyData = companyData;
+        }
+    }
+
+    /// <summary>
+    /// Parses the purchase price and related data from the form content.
+    /// </summary>
+    public void ParseData(string data)
+    {
+        var receiveIndex = data.IndexOf(ReceiveLookupString, StringComparison.OrdinalIgnoreCase);
+        var cashIndex = data.IndexOf(CashLookupString, StringComparison.OrdinalIgnoreCase);
+
+        string? value = null;
+        var lastParagraphStart = 0;
+        var nextParagraphEnd = 0;
+
+        if (receiveIndex > 0)
+        {
+            var valueStart = receiveIndex + ReceiveLookupString.Length;
+            if (valueStart + 5 <= data.Length)
+            {
+                value = data.Substring(valueStart, 5);
+                lastParagraphStart = data.LastIndexOf("<P", receiveIndex - 1, receiveIndex);
+                nextParagraphEnd = data.IndexOf("</P>", receiveIndex + 1);
             }
         }
 
-        public void ParseData(string data)
+        if (cashIndex > 0 && value is null)
         {
-            // This can be much improved . . .
-            string dataCpy = data;
-            const string receiveLookupString = "receive $";
-            const string cashLookupString = "in cash";
-            Task<int> receiveLookup = Task.Factory.StartNew<int>(() =>
+            var valueStart = cashIndex - CashLookupString.Length;
+            if (valueStart >= 0 && valueStart + 5 <= data.Length)
             {
-                return dataCpy.IndexOf(receiveLookupString);
-            });
-            Task<int> cashLookup = Task.Factory.StartNew<int>(() =>
-            {
-                return dataCpy.IndexOf(cashLookupString);
-            });
-
-            var tasks = new Task<int>[2] { receiveLookup, cashLookup };
-
-            bool completed = Task.WaitAll(tasks, timeout: new TimeSpan(0,1,0));
-
-            if(!completed)
-            {
-                return;
+                value = data.Substring(valueStart, 5);
+                lastParagraphStart = data.LastIndexOf("<P", cashIndex - 1, cashIndex);
+                nextParagraphEnd = data.IndexOf("</P>", cashIndex + 1);
             }
+        }
 
-            int lastParagraphStart = 0;
-            int nextParagraphEnd = 0;
+        if (value is null)
+        {
+            return;
+        }
 
-            string value = null;
-            if (receiveLookup.Result > 0)
+        var cleanedValue = value.Replace("$", "").Replace(",", "");
+
+        if (double.TryParse(cleanedValue, out var purchasePrice))
+        {
+            PurchasePrice = purchasePrice;
+
+            if (lastParagraphStart >= 0 && nextParagraphEnd > lastParagraphStart)
             {
-                value = data.Substring(receiveLookup.Result + receiveLookupString.Length, 5);
-                lastParagraphStart = data.LastIndexOf("<P", receiveLookup.Result - 1, receiveLookup.Result);
-                nextParagraphEnd = data.IndexOf("</P>", receiveLookup.Result + 1);
+                PurchasePriceDescription = data.Substring(
+                    lastParagraphStart,
+                    nextParagraphEnd - lastParagraphStart
+                );
             }
-
-            if(cashLookup.Result > 0 && value == null)
+            else
             {
-                value = data.Substring(cashLookup.Result - cashLookupString.Length, 5);
-                lastParagraphStart = data.LastIndexOf("<P", cashLookup.Result - 1, cashLookup.Result);
-                nextParagraphEnd = data.IndexOf("</P>", cashLookup.Result + 1);
-            }
-
-            if(value == null)
-            {
-                return;
-            }
-
-            if(double.TryParse(value.Replace("$","").Replace(",",""), out var purchasePrice))
-            {
-                PurchasePrice = purchasePrice;
-                try
-                {
-                    PurchasePriceDescription = data.Substring(lastParagraphStart, nextParagraphEnd);
-                }
-                catch
-                {
-                    PurchasePriceDescription = "N/A";
-                }
+                PurchasePriceDescription = "N/A";
             }
         }
     }

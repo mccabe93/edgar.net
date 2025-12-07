@@ -1,22 +1,29 @@
-﻿using Edgar.Net.Managers;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Edgar.Net;
 
-namespace Examples
+namespace Examples;
+
+/// <summary>
+/// Example usage of the CompanyManager for retrieving company information.
+/// </summary>
+public class CompanyManagerExamples
 {
-    public class CompanyManagerExamples
+    private readonly EdgarClient _client;
+
+    public CompanyManagerExamples(EdgarClient client)
     {
-        public async Task GetAllCompanyInfo()
+        _client = client;
+    }
+
+    /// <summary>
+    /// Retrieves and displays information for all registered companies.
+    /// </summary>
+    public async Task GetAllCompanyInfoAsync()
+    {
+        var companies = await _client.CompanyManager.GetAllCompaniesAsync();
+
+        foreach (var company in companies)
         {
-            var companies = await CompanyManager.GetAllCompanies();
-            
-            foreach(var company in companies)
-            {
-                Console.WriteLine($"{company.Name} ({company.Ticker}) -- CIK: {company.CIK}");
-            }
+            Console.WriteLine($"{company.Name} ({company.Ticker}) -- CIK: {company.CIK}");
         }
     }
 }

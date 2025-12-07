@@ -1,10 +1,27 @@
-﻿namespace Edgar.Net.Data.Companies
+﻿namespace Edgar.Net.Data.Companies;
+
+/// <summary>
+/// Represents a company registered with the SEC.
+/// </summary>
+public record Company
 {
-    public class Company
-    {
-        public uint CIK { get; set; }
-        public string Name { get; set; }
-        public string Ticker { get; set; }
-        public string Exchange { get; set; }
-    }
+    /// <summary>
+    /// Central Index Key - unique identifier assigned by the SEC.
+    /// </summary>
+    public required uint CIK { get; init; }
+
+    /// <summary>
+    /// Company name as registered with the SEC.
+    /// </summary>
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Stock ticker symbol.
+    /// </summary>
+    public required string Ticker { get; init; }
+
+    /// <summary>
+    /// Stock exchange where the company is listed.
+    /// </summary>
+    public string Exchange { get; init; } = string.Empty;
 }
